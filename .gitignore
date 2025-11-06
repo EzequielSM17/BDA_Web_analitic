@@ -9,11 +9,9 @@ site/node_modules/
 site/public/
 
 # Datos / Salidas
-project/data/*.csv
-project/data/*.json
-project/output/parquet/
-project/output/quality/
-project/output/*.html
+project/data/
+project/output/
+
 project/*.db
 
 # OS

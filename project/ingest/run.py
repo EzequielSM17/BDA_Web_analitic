@@ -158,13 +158,57 @@ def to_silver(df: pd.DataFrame, day: str, quarantine_dir: str) -> pd.DataFrame:
 
 # -------------------- Sesiones ORO -------------------- #
 
-def sessionize_and_metrics(silver: pd.DataFrame, session_timeout_min: int = 30):
+def detect_session_funnel(paths: list[str]) -> dict:
+    """Devuelve flags para el embudo ordenado: / -> /productos -> /carrito -> /checkout."""
+
+    def idx(p):
+        try:
+            return paths.index(p)
+        except ValueError:
+            return None
+
+    i_root = idx("/")
+    i_prod = idx("/productos")
+    i_cart = idx("/carrito")
+    i_chk = idx("/checkout")
+
+    saw_root = i_root is not None
+    saw_prod_after_root = saw_root and (
+        i_prod is not None) and (i_prod > i_root)
+    saw_cart_after_prod = saw_prod_after_root and (
+        i_cart is not None) and (i_cart > i_prod)
+    saw_chk_after_cart = saw_cart_after_prod and (
+        i_chk is not None) and (i_chk > i_cart)
+
+    return {
+        "saw_root": saw_root,
+        "saw_productos_after_root": saw_prod_after_root,
+        "saw_carrito_after_productos": saw_cart_after_prod,
+        "saw_checkout_after_carrito": saw_chk_after_cart,
+        "purchase": saw_chk_after_cart,  # compra si llegó a checkout en orden
+    }
+
+
+def build_gold(silver: pd.DataFrame, session_timeout_min: int = 30):
+    """
+    Devuelve:
+      - events_oro: eventos con session_id
+      - sessions: tabla de sesiones con flags embudo y métricas
+      - users_stats: visitas por usuario, sesiones y compras
+      - top_paths: top 10 páginas
+      - device_usage: uso de dispositivos (global)
+      - sessions_per_day: nº sesiones por día
+      - funnel_table: embudo agregado con tasas
+    """
     df = silver.sort_values(["user_id", "ts"]).copy()
+
+    # Sesionizar (gap > timeout => nueva sesión)
     df["prev_ts"] = df.groupby("user_id")["ts"].shift()
     df["gap_min"] = (df["ts"] - df["prev_ts"]).dt.total_seconds() / 60.0
     df["is_new_session"] = df["prev_ts"].isna() | (
-        df["gap_min"] > session_timeout_min)
+        df["gap_min"] > float(session_timeout_min))
     df["session_idx"] = df.groupby("user_id")["is_new_session"].cumsum()
+    # session_id estable por (user_id, date, idx)
 
     def make_session_id(row) -> str:
         base = f"{row.user_id}|{row.date}|{int(row.session_idx)}"
@@ -172,7 +216,111 @@ def sessionize_and_metrics(silver: pd.DataFrame, session_timeout_min: int = 30):
 
     df["session_id"] = df.apply(make_session_id, axis=1)
 
-    return df  # simplificado para ejemplo
+    # Flags de embudo por sesión
+    paths_by_session = (
+        df.sort_values("ts")
+          .groupby("session_id")["path"]
+          .apply(list)
+          .to_dict()
+    )
+
+    flags_rows = []
+    for sid, plist in paths_by_session.items():
+        flags = detect_session_funnel(plist)
+        flags["session_id"] = sid
+        flags_rows.append(flags)
+    session_flags = pd.DataFrame(flags_rows)
+    # Tabla de sesiones con métricas
+    sessions = (
+        df.groupby("session_id")
+          .agg(
+              user_id=("user_id", "first"),
+              date=("date", "first"),
+              start_ts=("ts", "min"),
+              end_ts=("ts", "max"),
+              pageviews=("path", "count"),
+              device_first=("device", "first"),
+        )
+        .reset_index()
+        .merge(session_flags, on="session_id", how="left")
+    )
+    sessions["session_duration_sec"] = (
+        sessions["end_ts"] - sessions["start_ts"]).dt.total_seconds().fillna(0)
+
+    # Métricas por usuario
+    users_sessions = sessions.groupby("user_id").agg(
+        sessions=("session_id", "nunique"),
+        purchases=("purchase", "sum"),
+        avg_session_duration_sec=("session_duration_sec", "mean"),
+    )
+    users_events = df.groupby("user_id").size().rename("events")
+    users_stats = (
+        users_sessions.merge(users_events, on="user_id", how="left")
+                      .reset_index()
+                      .sort_values(["purchases", "sessions", "events"], ascending=[False, False, False])
+    )
+
+    # Top 10 paths
+    top_paths = (
+        df["path"].value_counts()
+        .rename_axis("path")
+        .reset_index(name="views")
+        .head(10)
+    )
+
+    # Uso de dispositivos (global)
+    device_usage = (
+        df["device"].value_counts(dropna=True)
+        .rename_axis("device")
+        .reset_index(name="events")
+    )
+
+    # Sesiones por día
+    sessions_per_day = (
+        sessions.groupby("date")["session_id"].nunique()
+                .rename("sessions")
+                .reset_index()
+    )
+
+    # Embudo agregado
+    total_sessions = len(sessions)
+    s_root = int(sessions["saw_root"].sum())
+    s_prod = int(sessions["saw_productos_after_root"].sum())
+    s_cart = int(sessions["saw_carrito_after_productos"].sum())
+    s_chk = int(sessions["saw_checkout_after_carrito"].sum())
+
+    funnel_table = pd.DataFrame(
+        {
+            "step": [
+                "Sesiones", "→ con '/'",
+                "→ luego '/productos'",
+                "→ luego '/carrito'",
+                "→ luego '/checkout' (compra)"
+            ],
+            "count": [total_sessions, s_root, s_prod, s_cart, s_chk],
+        }
+    )
+    # tasas
+    def safe_div(a, b): return (a / b) if b else 0.0
+    funnel_table["rate_step"] = [
+        1.0,
+        safe_div(s_root, total_sessions),
+        safe_div(s_prod, s_root),
+        safe_div(s_cart, s_prod),
+        safe_div(s_chk,  s_cart),
+    ]
+    funnel_table["rate_overall"] = [
+        1.0,
+        safe_div(s_root, total_sessions),
+        safe_div(s_prod, total_sessions),
+        safe_div(s_cart, total_sessions),
+        safe_div(s_chk,  total_sessions),
+    ]
+
+    # Limpieza columnas intermedias en eventos
+    events_oro = df.drop(columns=["prev_ts"]).copy()
+
+    return events_oro, sessions, users_stats, top_paths, device_usage, sessions_per_day, funnel_table
 
 
 # -------------------- MAIN -------------------- #
@@ -218,6 +366,30 @@ def main():
     silver_out = os.path.join(args.silver, "events_plata.parquet")
     write_parquet(silver, silver_out)
     print(f"[OK] Guardado PLATA → {silver_out}")
+    print("[INFO] ORO sesionizando + métricas…")
+    events_oro, sessions, users_stats, top_paths, device_usage, sessions_per_day, funnel = build_gold(
+        silver, session_timeout_min=30
+    )
+
+    # Guardar ORO
+    write_parquet(events_oro, os.path.join(args.gold, "events_oro.parquet"))
+    write_parquet(sessions, os.path.join(args.gold, "sessions_oro.parquet"))
+    write_parquet(users_stats, os.path.join(args.gold, "users_stats.parquet"))
+    write_parquet(top_paths, os.path.join(args.gold, "top_paths.parquet"))
+    write_parquet(device_usage, os.path.join(
+        args.gold, "device_usage.parquet"))
+    write_parquet(sessions_per_day, os.path.join(
+        args.gold, "sessions_per_day.parquet"))
+    write_parquet(funnel, os.path.join(args.gold, "funnel.parquet"))
+
+    print(f"[OK] Guardados ORO en {args.gold}/")
+    print("\n[RESUMEN ORO]")
+    print(
+        f"- Sesiones totales: {len(sessions)} | Compras: {int(sessions['purchase'].sum())}")
+    print(
+        f"- Usuarios con compra: {users_stats.loc[users_stats['purchases'] > 0, 'user_id'].nunique()}")
+    print(
+        f"- Top device: {device_usage.iloc[0]['device'] if not device_usage.empty else 'N/A'}")
 
 
 if __name__ == "__main__":

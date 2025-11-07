@@ -3,28 +3,8 @@ import os
 import random
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
-from pathlib import Path
 
-DATA = Path(__file__).resolve().parents[1] / "data" / "drops"
-DATA.mkdir(parents=True, exist_ok=True)
-
-
-VALID_DEVICES = ["mobile", "desktop", "tablet"]
-LOOK_SITE = [
-    "/blog",
-    "/contacto",
-]
-PIPELINE_MAKE_PURCHASE = {"/": "/productos",
-                          "/productos": "/carrito", "/carrito": "/checkout"}
-VALID_REFERRERS = ["direct", "google", "facebook"]
-VALID_USERS = [f"u{idx:03d}" for idx in range(1, 5)]
-MAX_SIZE_KB = 20
-MAX_SIZE_BYTES = MAX_SIZE_KB * 1024
-RATE_MAKE_PURCHASE = 30
-RATE_NEW_SESSION = 30
-BAD_DEVICES = ["toaster", "phon3", "desk-top", ""]
-BAD_REFERRERS = [None, "(not set)", "   ", "file://local", "http://malformed"]
-BAD_PATHS = ["productos", "checkout", "//double-slash", ""]
+from configs.get_data_config import DATA, LOOK_SITE, MAX_SIZE_BYTES, PIPELINE_MAKE_PURCHASE, RATE_MAKE_PURCHASE, VALID_DEVICES, VALID_REFERRERS, VALID_USERS
 
 
 def parse_args(date_str: str = datetime.now().date().isoformat(), events_n: int = 150, seed: int = 17) -> Dict[str, Any]:
@@ -43,7 +23,7 @@ def iso(dt: datetime) -> str:
 
 
 def make_purchase(current: datetime, session: Dict[str, Any], rng: random.Random):
-    current += timedelta(seconds=rng.randint(5, 300))
+    current += timedelta(seconds=rng.randint(5, 30))
     finish_session = False
     if session["path"] == '/carrito':
         finish_session = True
@@ -62,7 +42,7 @@ def update_session(sessions, user_id, new_session_data):
 
 
 def choose_action(user: str, current: datetime, device: str, rng: random.Random) -> Dict[str, Any]:
-    current += timedelta(seconds=rng.randint(5, 300))
+    current += timedelta(seconds=rng.randint(5, 30))
     rate = rng.randint(1, 100)
     if rate <= RATE_MAKE_PURCHASE:
         return [current, {"ts": iso(current), "user_id": user,
@@ -77,7 +57,7 @@ def choose_action(user: str, current: datetime, device: str, rng: random.Random)
 
 def generate_session(current: datetime, rng: random.Random):
 
-    current += timedelta(seconds=rng.randint(5, 300))
+    current += timedelta(seconds=rng.randint(5, 30))
     user = rng.choice(VALID_USERS)
     device = rng.choices(population=VALID_DEVICES,
                          weights=[55, 38, 7], k=1)[0]
@@ -121,12 +101,17 @@ def generate_valid_events(date_str: str, n: int, rng: random.Random) -> List[Dic
             else:
                 current, event, finished_session = make_purchase(
                     current, exist_session, rng)
-                events.append(event)
-                if finished_session:
 
-                    sessions.remove(exist_session)
+                if rng.random() < 0.60:
+                    events.append(event)
+                    if finished_session:
+
+                        sessions.remove(exist_session)
+                    else:
+                        update_session(sessions, event["user_id"], event)
                 else:
-                    update_session(sessions, event["user_id"], event)
+                    sessions.remove(exist_session)
+
     return events
 
 
@@ -185,7 +170,7 @@ def write_ndjson_limited(path: str, lines: List[str], max_bytes: int):
 
 
 def main():
-    args = parse_args(events_n=180, seed=42)
+    args = parse_args(events_n=500, seed=42)
     rng = random.Random(args["seed"])
 
     out_path = ensure_dir_for_date(args["date"])

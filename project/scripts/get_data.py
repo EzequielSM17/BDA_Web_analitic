@@ -1,24 +1,17 @@
 import json
-import os
 import random
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 
-from configs.get_data_config import DATA, LOOK_SITE, MAX_SIZE_BYTES, PIPELINE_MAKE_PURCHASE, RATE_MAKE_PURCHASE, VALID_DEVICES, VALID_REFERRERS, VALID_USERS
+from configs.get_data_config import LOOK_SITE, MAX_SIZE_BYTES, PIPELINE_MAKE_PURCHASE, RATE_MAKE_PURCHASE, VALID_DEVICES, VALID_REFERRERS, VALID_USERS
+from utils.files import ensure_dir
 
 
 def parse_args(date_str: str = datetime.now().date().isoformat(), events_n: int = 150, seed: int = 17) -> Dict[str, Any]:
     return {"date": date_str, "n": events_n, "seed": seed}
 
 
-def ensure_dir_for_date(date_str: str) -> str:
-    out_dir = (DATA / date_str)
-    os.makedirs(out_dir, exist_ok=True)
-    return os.path.join(out_dir, "events.ndjson")
-
-
 def iso(dt: datetime) -> str:
-    # Siempre UTC en ISO-8601 con sufijo Z
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -173,7 +166,7 @@ def main():
     args = parse_args(events_n=500, seed=42)
     rng = random.Random(args["seed"])
 
-    out_path = ensure_dir_for_date(args["date"])
+    out_path = ensure_dir(f"data/drops/{args["date"]}", "events.ndjson")
     valid = generate_valid_events(args["date"], args["n"], rng)
     lines = [json.dumps(event, ensure_ascii=False) for event in valid]
 

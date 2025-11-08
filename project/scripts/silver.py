@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 
 from utils.files import write_parquet
@@ -9,15 +8,13 @@ def to_silver(df: pd.DataFrame, day: str, quarantine_dir: str) -> pd.DataFrame:
     """Limpieza y normalización; los registros inválidos van a cuarentena."""
     out = df.copy()
 
-    # Tipado
     out["ts"] = pd.to_datetime(out["ts"], errors="coerce", utc=True)
     out["user_id"] = out["user_id"].apply(normalize_string).astype("string")
-
-    # Normalizaciones
     out["path"] = out["path"].apply(normalize_path).astype("string")
     out["referrer"] = out["referrer"].apply(
         normalize_referrer).astype("string")
     out["device"] = out["device"].apply(normalize_device).astype("string")
+
     for key in out.keys():
         if key in {"ts", "user_id", "path", "referrer", "device"}:
             mask_errors = out[key].isna()
@@ -25,11 +22,11 @@ def to_silver(df: pd.DataFrame, day: str, quarantine_dir: str) -> pd.DataFrame:
             out.dropna(subset=[key], inplace=True)
             if not invalid.empty:
                 invalid["_error"] = "ts"
-                invalid_path = os.path.join(
-                    f"{quarantine_dir}/{day}", f"error_{key}.parquet")
-                write_parquet(invalid, invalid_path)
+
+                write_parquet(
+                    invalid, f"{quarantine_dir}/{day}", f"error_{key}.parquet")
                 print(
-                    f"[WARN] {len(invalid)} filas inválidas enviadas a → {invalid_path}")
+                    f"[WARN] {len(invalid)} filas inválidas enviadas a → {quarantine_dir}/{day}/error_{key}.parquet")
 
     # Día objetivo
     day0 = pd.Timestamp(day, tz="UTC")
@@ -39,12 +36,11 @@ def to_silver(df: pd.DataFrame, day: str, quarantine_dir: str) -> pd.DataFrame:
     invalid_day = out.loc[~mask_day].copy()
     if not invalid_day.empty:
         invalid_day["_error"] = "outside_day"
-        invalid_path = os.path.join(f"{quarantine_dir}/{day}",
-                                    "error_ts.parquet")
-        write_parquet(invalid_day, invalid_path)
+        write_parquet(
+            invalid_day, f"{quarantine_dir}/{day}", "error_out_ts.parquet")
 
         print(
-            f"[WARN] {len(invalid_day)} filas fuera del rango diario enviadas a cuarentena")
+            f"[WARN] {len(invalid_day)} filas inválidas enviadas a → {quarantine_dir}/{day}/error_out_ts.parquet")
 
     valid_day = (
         valid_day.sort_values(["user_id", "ts", "path"])

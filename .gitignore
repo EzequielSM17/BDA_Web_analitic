@@ -16,3 +16,4 @@ project/*.db
 
 # OS
 .DS_Store
+.Obsidian

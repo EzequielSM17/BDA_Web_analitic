@@ -1,10 +1,3 @@
-from pathlib import Path
-
-
-DATA = Path(__file__).resolve().parents[2] / "data" / "drops"
-DATA.mkdir(parents=True, exist_ok=True)
-
-
 VALID_DEVICES = ["mobile", "desktop", "tablet"]
 LOOK_SITE = [
     "/blog",

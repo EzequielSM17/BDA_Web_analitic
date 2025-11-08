@@ -3,6 +3,18 @@ import hashlib
 import pandas as pd
 
 
+def idx(lst, val):
+    try:
+        return lst.index(val)
+    except ValueError:
+        return None
+
+
+def make_session_id(row) -> str:
+    base = f"{row.user_id}|{row.date}|{int(row.session_idx)}"
+    return hashlib.sha1(base.encode()).hexdigest()[:16]
+
+
 def detect_session_funnel_with_counts(paths: list[str]) -> dict:
     """
     Devuelve flags de 'paso visto' (al menos una vez, en orden) y
@@ -14,13 +26,6 @@ def detect_session_funnel_with_counts(paths: list[str]) -> dict:
     en /productos si ya hubo '/' en la sesión (más realista en ecommerce).
     """
     saw_root = ("/" in paths)
-    # flags “visto en orden al menos una vez”
-
-    def idx(lst, val):
-        try:
-            return lst.index(val)
-        except ValueError:
-            return None
 
     i_root = idx(paths, "/")
     i_prod = idx(paths, "/productos")
@@ -34,24 +39,21 @@ def detect_session_funnel_with_counts(paths: list[str]) -> dict:
     saw_chk_after_cart = (
         saw_cart_after_prod and i_chk is not None and i_chk > i_cart)
 
-    # >>> contador de compras dentro de la sesión <<<
     purchases = 0
     have_seen_root = False
-    state = "start"  # start -> after_root -> prod -> cart
+    state = "start"
 
     for p in paths:
         if p == "/":
             have_seen_root = True
-            state = "after_root"  # reinicia el ciclo “ideal”
+            state = "after_root"
             continue
 
         if state == "after_root":
             if p == "/productos":
                 state = "prod"
-            # si salta a otra cosa, seguimos esperando /productos
             continue
 
-        # Permite iniciar un ciclo extra en /productos si ya hubo '/' antes en la sesión
         if state == "start" and have_seen_root:
             if p == "/productos":
                 state = "prod"
@@ -60,22 +62,19 @@ def detect_session_funnel_with_counts(paths: list[str]) -> dict:
         if state == "prod":
             if p == "/carrito":
                 state = "cart"
-            elif p == "/":         # si vuelve a home, reinicia ciclo ideal
+            elif p == "/":
                 state = "after_root"
             else:
-                # sigue buscando /carrito
                 pass
             continue
 
         if state == "cart":
             if p == "/checkout":
                 purchases += 1
-                # tras comprar, el usuario podría volver a /productos y comprar de nuevo
                 state = "start"
             elif p == "/":
                 state = "after_root"
             else:
-                # sigue buscando /checkout
                 pass
             continue
 
@@ -84,7 +83,7 @@ def detect_session_funnel_with_counts(paths: list[str]) -> dict:
         "saw_productos_after_root": saw_prod_after_root,
         "saw_carrito_after_productos": saw_cart_after_prod,
         "saw_checkout_after_carrito": saw_chk_after_cart,
-        "purchases_in_session": purchases,  # 👈 entero (0,1,2,...)
+        "purchases_in_session": purchases,
     }
 
 
@@ -108,10 +107,6 @@ def build_gold(silver: pd.DataFrame, session_timeout_min: int = 1):
         df["gap_min"] > float(session_timeout_min))
     df["session_idx"] = df.groupby("user_id")["is_new_session"].cumsum()
     # session_id estable por (user_id, date, idx)
-
-    def make_session_id(row) -> str:
-        base = f"{row.user_id}|{row.date}|{int(row.session_idx)}"
-        return hashlib.sha1(base.encode()).hexdigest()[:16]
 
     df["session_id"] = df.apply(make_session_id, axis=1)
 
@@ -149,7 +144,7 @@ def build_gold(silver: pd.DataFrame, session_timeout_min: int = 1):
     # Métricas por usuario
     users_sessions = sessions.groupby("user_id").agg(
         sessions=("session_id", "nunique"),
-        purchases=("purchases_in_session", "sum"),  # 👈 antes sumabas booleanos
+        purchases=("purchases_in_session", "sum"),
         avg_session_duration_sec=("session_duration_sec", "mean"),
     )
 

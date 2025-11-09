@@ -1,8 +1,11 @@
+from argparse import Namespace
 import datetime
 import pandas as pd
 
+from configs.run_config import FILE_GOLD_NAME, FILE_SILVER_NAME, SILVER_DIR
 
-def build_report_md(args_day: str,
+
+def build_report_md(args: Namespace,
                     bronze_df: pd.DataFrame,
                     bad_df: pd.DataFrame,
                     silver: pd.DataFrame,
@@ -13,8 +16,7 @@ def build_report_md(args_day: str,
                     sessions_per_day: pd.DataFrame,
                     funnel: pd.DataFrame) -> str:
     """Devuelve el texto Markdown del reporte final."""
-    periodo_ini = f"{args_day} 00:00 UTC"
-    periodo_fin = f"{args_day} 23:59 UTC"
+
     gen_ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     total_sessions = len(sessions)
@@ -41,7 +43,7 @@ def build_report_md(args_day: str,
 
     report = (
         "# Reporte · Web Logs (BRONCE → PLATA → ORO)\n"
-        f"**Día:** {args_day} · **Fuente:** events.ndjson · **Generado:** {gen_ts}\n\n"
+        f"**Día:** {args.day} · **Fuente:** events.ndjson · **Generado:** {gen_ts}\n\n"
         "## 1. Titular\n"
         f"Usuarios únicos {uniq_users}; sesiones {total_sessions}; compras {total_purchases}.\n\n"
         "## 2. KPIs\n"
@@ -64,8 +66,10 @@ def build_report_md(args_day: str,
         f"- Filas PLATA: {silver_rows}\n"
         f"- Líneas rotas (JSON) a cuarentena: {bad_json_rows}\n"
         f"- Diferencia BRONCE→PLATA (drops/dedupe/fuera de día): {bronze_rows - silver_rows}\n\n"
+        f"- Porcentaje de cobertura PLATA/BRONCE:  {(silver_rows/(bronze_rows+bad_json_rows)*100.0) if bronze_rows > 0 else 0.0:.2f}%\n\n"
         "## 8. Persistencia\n"
-        "- Parquet PLATA: `output/plata/events_plata.parquet`\n"
-        "- Reporte: `output/oro/reporte.md`\n"
+        f"- Parquet PLATA: `{args.gold}/{FILE_SILVER_NAME}`\n"
+        f"- Parquet ORO: `{args.silver}/{FILE_GOLD_NAME}`\n"
+        f"- Reporte: `{args.report}/{args.day}-reporte.md`\n"
     )
     return report

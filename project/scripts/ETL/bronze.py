@@ -30,6 +30,9 @@ def read_ndjson_bronze(path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     df = pd.DataFrame(rows)
     bad_df = pd.DataFrame(bad)
     ts_now = pd.Timestamp.now(tz="UTC")
+    batch_id = os.getpid()
     df["_ingest_ts"] = ts_now
     bad_df["_ingest_ts"] = ts_now
+    df["_batch_id"] = batch_id
+    bad_df["_batch_id"] = batch_id
     return df, bad_df

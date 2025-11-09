@@ -8,16 +8,16 @@ import * as Plugin from "./quartz/plugins"
  */
 const config: QuartzConfig = {
   configuration: {
-    pageTitle: "BDA-UT1",
+    pageTitle: "Web Analitic, EzequielSM",
     pageTitleSuffix: "",
     enableSPA: true,
     enablePopovers: true,
     analytics: {
       provider: "plausible",
     },
-    locale: "en-US",
-    name: "Proyecto UT1 · RA1 · BA",
-    baseUrl: "https://<TU_USUARIO>.github.io/Proyecto_UT1_RA1_BA",
+    locale: "es-ES",
+    name: "Web Analitic, EzequielSM",
+    baseUrl: "https://EzequielSM17.github.io/BDA_Web_analitic",
     description: "Ingesta · Almacenamiento · Reporte",
     ignorePatterns: ["private", "templates", ".obsidian"],
     defaultDateType: "modified",

@@ -1,32 +1,73 @@
-# Diseño de ingestión
+# 🪶 Diseño de ingestión
 
-## Resumen
-Describe **cómo entran los datos**, la **frecuencia**, y las **garantías** mínimas.
+## 📘 Resumen
+El proceso de **ingestión** constituye la capa **BRONCE** del pipeline.  
+Su función es **recibir, validar y almacenar los eventos web crudos** provenientes del simulador (`00_insumo.ipynb`) o de un sistema de logs equivalente.  
+El flujo opera en **modo batch**, con ejecución **horaria** y consolidación **diaria**, garantizando trazabilidad y separación entre líneas válidas y corruptas (JSON inválido).
 
-## Fuente
-- **Origen:** (p. ej., `data/drops/*.csv` / API / logs)
-- **Formato:** CSV / NDJSON / Avro
-- **Frecuencia:** diario / semanal / streaming (cada N s)
+---
 
-## Estrategia
-- **Modo:** `batch` / `micro-batch` (10–60 s) / `continua`
-- **Incremental:** por `fecha_operacion` / CDC / full-refresh controlado
-- **Particionado:** por fecha (`YYYY/MM/DD`) / otro
+## 🌍 Fuente
+- **Origen:** archivos locales `data/drops/<YYYY-MM-DD>/events.ndjson` generados por el simulador de tráfico web.  
+- **Formato:** **NDJSON** (Newline-Delimited JSON, un evento JSON por línea).  
+- **Frecuencia:** **batch horario** (procesamiento diario consolidado).  
+- **Volumen esperado:** entre 100 y 1.000 eventos por día (≈100–500 KB).
 
-## Idempotencia y deduplicación
-- **batch_id:** `hash(nombre_archivo + tamaño + mtime)`
-- **clave natural:** `(fecha, id_cliente, id_producto)` o `event_id`
-- **Política:** “último gana por `_ingest_ts`”
+---
 
-## Checkpoints y trazabilidad
-- **checkpoints/offset:** (si streaming)
-- **trazabilidad:** `_ingest_ts`, `_source_file`, `_batch_id`
-- **DLQ/quarantine:** ruta y motivos
+## ⚙️ Estrategia
+- **Modo:** `batch` periódico (cada hora).  
+- **Incremental:** por **fecha de evento (`day`)**; cada ejecución procesa solo el día especificado.  
+- **Particionado:** por fecha `YYYY/MM/DD`.  
+- **Procesamiento:** lectura → validación JSON → separación “buenos” vs “rotos” → escritura en `output/plata/`.  
+- **Script responsable:** `bronze.py` (función `read_ndjson_bronze()`).
 
-## SLA
-- **Disponibilidad:** (p. ej., 03:00 UTC a diario)
-- **Alertas:** (si aplica)
+---
 
-## Riesgos / Antipatrones
-- Batch con necesidad de segundos → **no encaja**
-- Falta de clave natural → defínela antes de cargar
+## 🔁 Idempotencia y deduplicación
+- **batch_id:** generado dinámicamente como  
+  ```text
+  batch_id = os.getpid() + timestamp_utc_now
+garantizando unicidad por corrida.
+
+- **Clave natural:** combinación `(user_id, ts, path)` para identificar un evento único.
+    
+- **Política de resolución:** “**último gana**” (`keep="first"`, ordenado por `_ingest_ts`).
+    
+- **Propósito:** evitar duplicados en re-ejecuciones del mismo archivo.
+- ---
+
+## 🧩 Checkpoints y trazabilidad
+
+- **checkpoints/offset:** _no aplica_ (modo batch, no streaming).
+    
+- **trazabilidad:**
+    
+    - `_ingest_ts` → timestamp UTC de ingesta.
+        
+    - `_source_file` → nombre del archivo origen.
+        
+    - `_batch_id` → identificador único del lote.
+        
+- **DLQ / cuarentena:**
+    
+    - Ruta: `quarantine_plata/<day>/`
+        
+    - Motivos: `invalid_json`, `bad_format`, `missing_field`, `empty_user_id`, `timestamp_out_of_day`.
+        
+    - Formato: `Parquet`, un archivo por tipo de error (`error_<campo>.parquet`).
+        
+
+---
+
+## ⏰ SLA
+
+- **Disponibilidad:** los datos del día **D** deben estar disponibles en la capa PLATA a las **03:00 UTC** del día **D+1**.
+    
+- **Alertas:**
+    
+    - Archivo faltante o tamaño anómalo.
+        
+    - % de errores en cuarentena > 10%.
+        
+    - Falla en la lectura o escritura del batch.

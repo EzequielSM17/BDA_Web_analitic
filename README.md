@@ -13,10 +13,10 @@ pip install -r project/requirements.txt
 # o: conda env create -f project/environment.yml && conda activate ut1
 
 # 2) (Opcional) Generar datos de ejemplo
-python project/ingest/get_data.py
+python project/scripts/get_data.py
 
 # 3) Pipeline fin-a-fin (ingesta→clean→oro→reporte.md)
-python project/ingest/run.py
+python project/scripts/run.py
 
 # 4) Copiar el reporte a la web Quartz
 python project/tools/copy_report_to_site.py
@@ -32,9 +32,9 @@ npx quartz build --serve   # abre http://localhost:8080
 
 ## Flujo de datos
 Bronce (`raw`) → Plata (`clean`) → Oro (`analytics`).  
-Idempotencia por `batch_id` (batch) o `event_id` (stream).  
+Idempotencia por `batch_id` (batch).  
 Deduplicación “último gana” por `_ingest_ts`.  
-Reporte Markdown: `project/output/reporte.md` → `site/content/reportes/reporte-UT1.md`.
-# BDA_Proyecto_UT1_RA1
+Reporte Markdown: `project/output/(fecha)-reporte.md` → `site/content/reportes/(fecha)-reporte.md`.
+
 
 

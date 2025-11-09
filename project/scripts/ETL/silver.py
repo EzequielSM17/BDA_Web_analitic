@@ -44,7 +44,7 @@ def to_silver(df: pd.DataFrame, day: str, quarantine_dir: str) -> pd.DataFrame:
 
     valid_day = (
         valid_day.sort_values(["user_id", "ts", "path"])
-        .drop_duplicates(subset=["user_id", "ts", "path"], keep="first")
+        .drop_duplicates(subset=["user_id", "ts", "path"], keep="last")
     )
 
     valid_day["date"] = valid_day["ts"].dt.date.astype("string")

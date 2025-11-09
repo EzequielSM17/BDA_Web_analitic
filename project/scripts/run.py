@@ -6,11 +6,11 @@ BRONCE → PLATA → ORO para logs web en NDJSON usando pandas + pyarrow.
 """
 import argparse
 
-from gold import build_gold
-from bronze import read_ndjson_bronze
+from ETL.gold import build_gold
+from ETL.bronze import read_ndjson_bronze
 from report import build_report_md
 from configs.run_config import BRONZE_DIR, DAY, FILE_BRONZE_NAME, FILE_GOLD_NAME, FILE_SILVER_NAME, GOLD_DIR, QUARANTINE_DIR, REPORT_DIR, SILVER_DIR
-from silver import to_silver
+from ETL.silver import to_silver
 from utils.files import write_file, write_parquet
 
 
@@ -56,7 +56,7 @@ def main():
     write_parquet(events_oro, args.gold, FILE_GOLD_NAME)
     # ---- Reporte Markdown ----
 
-    report_md = build_report_md(args.day, bronze_df, bad_df, silver,
+    report_md = build_report_md(args, bronze_df, bad_df, silver,
                                 sessions, users_stats, top_paths, device_usage,
                                 sessions_per_day, funnel)
 

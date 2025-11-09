@@ -4,32 +4,52 @@ owner: "equipo-alumno"
 periodicidad: "diaria"
 version: "1.0.0"
 ---
+# 🏆 Modelo de negocio (capa ORO)
 
-# Modelo de negocio (capa oro)
+## 📘 Tablas ORO
+- **events_oro** (base): granularidad **evento por usuario**  
+  Contiene todos los eventos limpios con `session_id` asignado, y trazabilidad (`_ingest_ts`, `_batch_id`).  
 
-## Tablas oro
-- **clean_ventas** (fuente): granularidad **línea de venta**
-- **ventas_diarias** (vista): granularidad **día**
+- **sessions** (vista): granularidad **sesión por usuario**  
+  Incluye métricas de navegación, duración, páginas vistas y embudo `/ → /productos → /carrito → /checkout`.  
 
-## Métricas (KPI)
-- **Ingresos netos**: Σ(`unidades * precio_unitario`) sobre `clean_ventas`
-- **Ticket medio**: `Ingresos netos / nº_transacciones`
-- **Top producto**: `id_producto` con mayor `importe` en periodo
+- **users_stats** (vista): granularidad **usuario**  
+  Resume actividad agregada: nº sesiones, nº compras, duración media, nº eventos.  
 
-## Supuestos
-- Dinero en EUR constantes, sin impuestos
-- Dedupe “último gana”
+- **top_paths** (vista): granularidad **ruta (path)**  
+  Muestra las 10 páginas más vistas y su conteo global.  
 
-## Consultas base (SQL conceptual)
-```sql
--- Ingresos por día
-SELECT fecha, SUM(unidades*precio_unitario) AS importe_total, COUNT(*) AS lineas
-FROM clean_ventas
-GROUP BY fecha;
+- **device_usage** (vista): granularidad **tipo de dispositivo**  
+  Suma de eventos por `device`.  
 
--- Top productos
-SELECT id_producto, SUM(unidades*precio_unitario) AS importe
-FROM clean_ventas
-GROUP BY id_producto
-ORDER BY importe DESC;
-```
+- **sessions_per_day** (vista): granularidad **día**  
+  Número de sesiones distintas por fecha (`date`).  
+
+- **funnel_table** (vista): granularidad **paso del embudo**  
+  Embudo agregado de conversión con tasas por etapa:
+  `/ → /productos → /carrito → /checkout`.  
+
+---
+
+## 📊 Métricas (KPI)
+| Métrica | Definición | Fuente |
+|:---------|:------------|:-------|
+| **Usuarios únicos** | `nunique(user_id)` | `events_oro` |
+| **Sesiones totales** | `count(distinct session_id)` | `sessions` |
+| **Compras (checkouts)** | `Σ(purchases_in_session)` | `sessions` |
+| **Páginas por sesión (media)** | `mean(pageviews)` | `sessions` |
+| **Duración media de sesión (min)** | `mean(session_duration_sec)/60` | `sessions` |
+| **Top páginas** | `path` con mayor `views` | `top_paths` |
+| **Uso de dispositivos** | % de eventos por `device` | `device_usage` |
+| **Embudo de conversión** | tasas paso a paso `/ → /productos → /carrito → /checkout` | `funnel_table` |
+
+---
+
+## 💶 Supuestos de negocio
+- Cada `/checkout` representa una **compra exitosa**.  
+- No se consideran devoluciones ni cancelaciones.  
+- Múltiples compras por sesión son posibles.  
+- `session_timeout_min = 30` (gap > 30 min → nueva sesión).  
+- Moneda y precios no aplican (solo volumen de acciones).  
+- Se asume comportamiento realista de navegación: los usuarios pueden volver a `/` o abandonar sin comprar.  
+

@@ -1,6 +1,8 @@
 import re
 from typing import Any
 
+from configs.get_data_config import VALID_REFERRERS
+
 
 def normalize_string(x: Any) -> str | None:
 
@@ -34,8 +36,7 @@ def normalize_referrer(x: Any) -> str | None:
     s = normalize_string_path(x)
     if s in {"", "(not set)"}:
         return None
-    known = {"direct", "google", "facebook"}
-    if s not in known and s and not s.startswith("/"):
+    if s not in VALID_REFERRERS and s and not s.startswith("/"):
         s = "/" + s
     return s or None
 

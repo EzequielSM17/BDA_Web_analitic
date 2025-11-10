@@ -1,6 +1,6 @@
-# 🧽 Reglas de limpieza y calidad (PLATA)
+# Reglas de limpieza y calidad (PLATA)
 
-## 📘 Tipos y formatos
+## Tipos y formatos
 | Campo | Tipo esperado | Formato / Validación |
 |:------|:--------------|:---------------------|
 | `ts` | `datetime64[ns, UTC]` | ISO 8601 (`YYYY-MM-DDTHH:MM:SSZ`) |
@@ -15,7 +15,8 @@ Campos de texto: `astype("string")` tras normalización.
 
 ---
 
-## 🚫 Nulos
+## Nulos
+
 - **Campos obligatorios:**  
   `ts`, `user_id`, `path`, `referrer`, `device`  
 - **Tratamiento:**  
@@ -25,7 +26,8 @@ Campos de texto: `astype("string")` tras normalización.
 
 ---
 
-## 📊 Rangos y dominios
+##  Rangos y dominios
+
 - `ts` debe caer dentro del día de proceso (`day <= ts < day + 1 día`), caso contrario → `error_out_ts.parquet`.  
 - `device` debe pertenecer al dominio permitido.  
 - `referrer` válido o `None`.  
@@ -33,7 +35,8 @@ Campos de texto: `astype("string")` tras normalización.
 
 ---
 
-## 🔁 Deduplicación
+## Deduplicación
+
 - **Clave natural:** `(user_id, ts, path)`  
 - **Política:** “**último gana**” por `_ingest_ts`.  
 - **Implementación:**
@@ -47,17 +50,11 @@ Campos de texto: `astype("string")` tras normalización.
 ## Estandarización de texto
 
 - `strip()` de espacios.
-    
 - `lower()` para todo texto.
-    
-- Normalización de tildes (si existieran).
-    
 - Eliminación de duplicaciones de `/` en `path`.
-    
 - Prefijo `/` obligatorio en rutas relativas.
-    
 - Eliminación de URLs externas (`http://`, `https://`, `file://`).
-    
+
 
 ---
 
@@ -79,9 +76,8 @@ Todos los registros (válidos o no) conservan metadatos:
 
 Verificaciones automáticas posteriores a la limpieza:
 
-|Métrica|Descripción / Fórmula|
-|---|---|
-|`% de filas a cuarentena`|`(filas_quarantine / filas_bronce) * 100`|
-|`conteo esperado`|filas PLATA ≈ filas BRONCE - errores - duplicados|
-|`fechas válidas`|todos los `ts` dentro del día objetivo|
-|`distribución por device`|debe coincidir con pesos esperados (55% mobile, 38% desktop, 7% tablet)|
+| Métrica                   | Descripción / Fórmula                                                   |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `% de filas a cuarentena` | `(filas_quarantine / filas_bronce) * 100`                               |
+| `conteo esperado`         | filas PLATA ≈ filas BRONCE - errores - duplicados                       |
+| `fechas válidas`          | todos los `ts` dentro del día objetivo                                  |

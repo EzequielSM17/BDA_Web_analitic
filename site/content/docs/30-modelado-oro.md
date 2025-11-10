@@ -1,14 +1,19 @@
 ---
-title: "Definición de métricas y tablas oro"
-owner: "equipo-alumno"
-periodicidad: "diaria"
-version: "1.0.0"
+title: Definición de métricas y tablas oro
+owner: Ezequiel Soler Martínez
+periodicidad: diaria
+version: 1.0.1
 ---
-# 🏆 Modelo de negocio (capa ORO)
+# Modelo de negocio (capa ORO)
 
-## 📘 Tablas ORO
+## Tablas ORO
+
+#### Guardas
+
 - **events_oro** (base): granularidad **evento por usuario**  
   Contiene todos los eventos limpios con `session_id` asignado, y trazabilidad (`_ingest_ts`, `_batch_id`).  
+
+#### Generadas 
 
 - **sessions** (vista): granularidad **sesión por usuario**  
   Incluye métricas de navegación, duración, páginas vistas y embudo `/ → /productos → /carrito → /checkout`.  
@@ -31,17 +36,17 @@ version: "1.0.0"
 
 ---
 
-## 📊 Métricas (KPI)
-| Métrica | Definición | Fuente |
-|:---------|:------------|:-------|
-| **Usuarios únicos** | `nunique(user_id)` | `events_oro` |
-| **Sesiones totales** | `count(distinct session_id)` | `sessions` |
-| **Compras (checkouts)** | `Σ(purchases_in_session)` | `sessions` |
-| **Páginas por sesión (media)** | `mean(pageviews)` | `sessions` |
-| **Duración media de sesión (min)** | `mean(session_duration_sec)/60` | `sessions` |
-| **Top páginas** | `path` con mayor `views` | `top_paths` |
-| **Uso de dispositivos** | % de eventos por `device` | `device_usage` |
-| **Embudo de conversión** | tasas paso a paso `/ → /productos → /carrito → /checkout` | `funnel_table` |
+## Métricas (KPI)
+| Métrica                            | Definición                                                | Fuente         |
+| :--------------------------------- | :-------------------------------------------------------- | :------------- |
+| **Usuarios únicos**                | `nunique(user_id)`                                        | `events_oro`   |
+| **Sesiones totales**               | `count(distinct session_id)`                              | `sessions`     |
+| **Compras (checkouts)**            | `Σ(purchases_in_session)`                                 | `sessions`     |
+| **Páginas por sesión (media)**     | `mean(pageviews)`                                         | `sessions`     |
+| **Duración media de sesión (min)** | `mean(session_duration_sec)/60`                           | `sessions`     |
+| **Top páginas**                    | `path` con mayor `views`                                  | `top_paths`    |
+| **Uso de dispositivos**            | % de eventos por `device`                                 | `device_usage` |
+| **Embudo de conversión**           | tasas paso a paso `/ → /productos → /carrito → /checkout` | `funnel_table` |
 
 ---
 

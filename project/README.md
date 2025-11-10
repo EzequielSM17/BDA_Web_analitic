@@ -4,7 +4,7 @@
 1. **Ingesta**: lee NDJSON de `data/drops/`, añade `_source_file` y `_ingest_ts`.
 2. **Limpieza**: coerción de tipos, rangos/dominos básicos, cuarentena, dedupe “último gana”.
 3. **Persistencia**: 
-   - **Parquet** (`output/(silver or gold)/events_(silver or gold).parquet`)
+   - **Parquet** (`output/(silver or gold)/<day>/events_(silver or gold).parquet`)
 4. **Reporte**: **releído desde Parquet** (fuente de verdad) → `output/reports/reporte.md`.
 
 ## Comandos

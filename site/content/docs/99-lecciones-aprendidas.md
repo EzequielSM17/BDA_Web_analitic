@@ -12,4 +12,11 @@
 El siguiente paso sería realizar el punto 1 de las mejoras, ya que a nivel técnico y de negocio es lo que más interesa.
 
 ## Apéndice (evidencias)
+![[Pasted image 20251110123305.png]]
 
+![[Pasted image 20251110123400.png]]
+
+![[Pasted image 20251110122954.png]]
+
+![[Pasted image 20251110122927.png]]
+![[Pasted image 20251110123501.png]]

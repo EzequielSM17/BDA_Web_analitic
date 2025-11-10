@@ -3,12 +3,8 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 
-from configs.get_data_config import LOOK_SITE, MAX_SIZE_BYTES, PIPELINE_MAKE_PURCHASE, RATE_MAKE_PURCHASE, VALID_DEVICES, VALID_REFERRERS, VALID_USERS
+from configs.get_data_config import DATE, LOOK_SITE, MAX_SIZE_BYTES, NUMBERS_OF_EVENTS, PIPELINE_MAKE_PURCHASE, RATE_MAKE_PURCHASE, SEED, VALID_DEVICES, VALID_REFERRERS, VALID_USERS
 from utils.files import ensure_dir
-
-
-def parse_args(date_str: str = datetime.now().date().isoformat(), events_n: int = 150, seed: int = 17) -> Dict[str, Any]:
-    return {"date": date_str, "n": events_n, "seed": seed}
 
 
 def iso(dt: datetime) -> str:
@@ -163,7 +159,7 @@ def write_ndjson_limited(path: str, lines: List[str], max_bytes: int):
 
 
 def main():
-    args = parse_args(events_n=500, seed=42)
+    args = {"date": DATE, "n": NUMBERS_OF_EVENTS, "seed": SEED}
     rng = random.Random(args["seed"])
 
     out_path = ensure_dir(f"data/drops/{args["date"]}", "events.ndjson")

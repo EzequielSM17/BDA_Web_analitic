@@ -8,7 +8,7 @@ from configs.run_config import FILE_GOLD_NAME, FILE_SILVER_NAME, SILVER_DIR
 def build_report_md(args: Namespace,
                     bronze_df: pd.DataFrame,
                     bad_df: pd.DataFrame,
-                    silver: pd.DataFrame,
+                    gold: pd.DataFrame,
                     sessions: pd.DataFrame,
                     users_stats: pd.DataFrame,
                     top_paths: pd.DataFrame,
@@ -22,7 +22,7 @@ def build_report_md(args: Namespace,
     total_sessions = len(sessions)
     total_purchases = int(sessions.get("purchases_in_session", pd.Series(
         dtype=int)).sum()) if "purchases_in_session" in sessions.columns else 0
-    uniq_users = int(silver["user_id"].nunique()) if not silver.empty else 0
+    uniq_users = int(gold["user_id"].nunique()) if not gold.empty else 0
     avg_pages_per_session = float(sessions["pageviews"].mean(
     )) if "pageviews" in sessions.columns and not sessions.empty else 0.0
     avg_session_min = float(sessions["session_duration_sec"].mean(
@@ -38,7 +38,7 @@ def build_report_md(args: Namespace,
         funnel, pd.DataFrame) and not funnel.empty) else "_(sin datos)_"
 
     bronze_rows = len(bronze_df)
-    silver_rows = len(silver)
+    silver_rows = len(gold)
     bad_json_rows = len(bad_df)
 
     report = (

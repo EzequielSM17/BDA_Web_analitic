@@ -26,15 +26,16 @@ cd site
 npx quartz build --serve   # abre http://localhost:8080
 ```
 
-## Publicación web (GitHub Pages)
-- En **Settings → Pages**, selecciona **Source = GitHub Actions**.
-- El workflow `./.github/workflows/deploy-pages.yml` compila `site/` y despliega.
+## Publicación web (Cloudflre)
+- En **Workers y pages**, selecciona **Source = Crear aplicacion**.
+- Elegir tu report de git
+- La configuración directorio raíz `site/`, comando de compilación `npx quartz build` y directorio de raiz `public`.
 
 ## Flujo de datos
 Bronce (`raw`) → Plata (`clean`) → Oro (`analytics`).  
 Idempotencia por `batch_id` (batch).  
-Deduplicación “último gana” por `_ingest_ts`.  
-Reporte Markdown: `project/output/(fecha)-reporte.md` → `site/content/reportes/(fecha)-reporte.md`.
+Deduplicación “último gana” por `ts`.  
+Reporte Markdown: `project/output/reports/(fecha)-reporte.md` → `site/content/reportes/(fecha)-reporte.md`.
 
 
 

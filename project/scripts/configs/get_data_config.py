@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 VALID_DEVICES = ["mobile", "desktop", "tablet"]
 LOOK_SITE = [
     "/blog",
@@ -14,3 +17,6 @@ RATE_NEW_SESSION = 30
 BAD_DEVICES = ["toaster", "phon3", "desk-top", ""]
 BAD_REFERRERS = [None, "(not set)", "   ", "file://local", "http://malformed"]
 BAD_PATHS = ["productos", "checkout", "//double-slash", ""]
+DATE = datetime.now().date().isoformat()
+NUMBERS_OF_EVENTS = 500
+SEED = 175

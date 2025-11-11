@@ -23,6 +23,8 @@ python project/tools/copy_report_to_site.py
 
 # 5) (Opcional) Previsualizar la web en local
 cd site
+nvm install 22
+npm i
 npx quartz build --serve   # abre http://localhost:8080
 ```
 

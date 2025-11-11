@@ -68,8 +68,8 @@ def build_report_md(args: Namespace,
         f"- Diferencia BRONCE→PLATA (drops/dedupe/fuera de día): {bronze_rows - silver_rows}\n\n"
         f"- Porcentaje de cobertura PLATA/BRONCE:  {(silver_rows/(bronze_rows+bad_json_rows)*100.0) if bronze_rows > 0 else 0.0:.2f}%\n\n"
         "## 8. Persistencia\n"
-        f"- Parquet PLATA: `{args.gold}/{FILE_SILVER_NAME}`\n"
-        f"- Parquet ORO: `{args.silver}/{FILE_GOLD_NAME}`\n"
+        f"- Parquet PLATA: `{args.gold}/{args.day}/{FILE_SILVER_NAME}`\n"
+        f"- Parquet ORO: `{args.silver}/{args.day}/{FILE_GOLD_NAME}`\n"
         f"- Reporte: `{args.report}/{args.day}-reporte.md`\n"
     )
     return report

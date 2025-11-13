@@ -26,10 +26,10 @@ El flujo opera en **modo batch**, con ejecución **horaria** y consolidación **
 
 ##  Idempotencia y deduplicación
 
-- **batch_id:** generado dinámicamente  
+- **Idempotencia:** Dado que el procesamiento es diario y cada día se genera un conjunto independiente de archivos, la idempotencia se garantiza sobrescribiendo los ficheros del mismo día. Cada ejecución vuelve a generar **BRONCE → PLATA → ORO** únicamente para esa fecha, produciendo un _silver_ y un _gold_ exclusivos de ese día.  Como todos los datos del día se recalculan y se almacenan siempre en los mismos paths de salida, **reprocesar el mismo día no duplica información ni altera el resultado final**, lo cual mantiene la idempotencia del pipeline.
 - **Clave natural:** combinación `(user_id, ts, path)` para identificar un evento único.
 - **Política de resolución:** “**último gana**” (`keep="last"`, ordenado por `_ingest_ts`).
-- **Propósito:** evitar duplicados en re-ejecuciones del mismo archivo.
+
 - ---
 
 ## Checkpoints y trazabilidad
